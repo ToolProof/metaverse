@@ -1,4 +1,4 @@
-import { World } from 'threebase/dist/World';
+import { World } from './World.js';
 import * as THREE from 'three';
 declare abstract class XRWorld extends World {
     protected controller: THREE.Group;

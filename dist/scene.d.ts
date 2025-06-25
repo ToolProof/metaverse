@@ -1,2 +1,3 @@
-declare function createScene(color?: string): any;
+import { Scene } from 'three';
+declare function createScene(color?: string): Scene;
 export { createScene };
