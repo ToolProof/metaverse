@@ -1,10 +1,10 @@
 import * as THREE from 'three';
 declare abstract class World {
-    protected scene: THREE.Scene;
-    protected renderer: THREE.WebGLRenderer;
-    protected camera: THREE.PerspectiveCamera;
-    protected cameraRig: THREE.Group<THREE.Object3DEventMap>;
-    protected clock: THREE.Clock;
+    protected scene: any;
+    protected renderer: any;
+    protected camera: PerspectiveCamera;
+    protected cameraRig: any;
+    protected clock: any;
     protected container: HTMLDivElement;
     protected dummyCube: THREE.Mesh;
     constructor(container: HTMLDivElement);

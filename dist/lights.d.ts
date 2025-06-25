@@ -1,6 +1,5 @@
-import { DirectionalLight, HemisphereLight } from 'three';
 declare function createLights(): {
-    ambientLight: HemisphereLight;
-    mainLight: DirectionalLight;
+    ambientLight: any;
+    mainLight: any;
 };
 export { createLights };

@@ -1,3 +1,2 @@
-import { WebGLRenderer } from 'three';
-declare function createRenderer(): WebGLRenderer;
+declare function createRenderer(): any;
 export { createRenderer };
