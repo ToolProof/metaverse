@@ -1,5 +1,4 @@
-import { World } from 'threebase/dist/World';
-// import { World } from './World.js';
+import { World } from './World.js';
 import { VRButton } from 'three/examples/jsm/webxr/VRButton.js';
 import * as THREE from 'three';
 
