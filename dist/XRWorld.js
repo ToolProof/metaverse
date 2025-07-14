@@ -1,31 +1,67 @@
 import { World } from './World.js';
 import { VRButton } from 'three/examples/jsm/webxr/VRButton.js';
 import * as THREE from 'three';
+export class TransientSelection {
+    onSelectStart(intersected) {
+        return { selectedObject: intersected, restoreOriginalPosition: true };
+    }
+    onSelectEnd(current) {
+        return { selectedObject: null };
+    }
+}
+export class PersistentSelection {
+    constructor() {
+        this.lastSelected = null;
+    }
+    onSelectStart(intersected) {
+        // Deselect if we click on the same object again or nothing
+        if (!intersected || intersected === this.lastSelected) {
+            this.lastSelected = null;
+            return { selectedObject: null };
+        }
+        this.lastSelected = intersected;
+        return { selectedObject: intersected };
+    }
+    onSelectEnd(current) {
+        return { selectedObject: current }; // no change
+    }
+}
 class XRWorld extends World {
-    constructor(container, targetType, rayColor) {
+    constructor(container, config) {
         super(container);
-        this.grabbedObject = null;
+        this.intersected = null;
+        this.selectedObject = null;
         this.grabbedObjectOriginalPosition = null;
         this.textSprite = null;
-        this.speedMultiplier = 1;
-        this.lastText = '';
-        this.targetType = targetType;
-        this.rayColor = rayColor;
+        this.config = config;
         this.renderer.xr.enabled = true;
         document.body.appendChild(VRButton.createButton(this.renderer));
-        this.controller = this.renderer.xr.getController(0);
-        this.controller.addEventListener('selectstart', this.onSelectStart.bind(this));
-        this.controller.addEventListener('selectend', this.onSelectEnd.bind(this));
-        this.scene.add(this.controller);
+        this.controller = this.renderer.xr.getController(1);
+        this.controller.addEventListener('selectstart', () => {
+            const intersected = this.raycastFromController();
+            const cmd = this.config.selectionBehavior.onSelectStart(intersected);
+            this.selectedObject = cmd.selectedObject;
+            if (cmd.restoreOriginalPosition) {
+                this.grabbedObjectOriginalPosition = this.selectedObject?.position.clone() ?? null;
+            }
+        });
+        this.controller.addEventListener('selectend', () => {
+            const cmd = this.config.selectionBehavior.onSelectEnd(this.selectedObject);
+            if (cmd.restoreOriginalPosition && this.selectedObject) {
+                this.selectedObject.position.copy(this.grabbedObjectOriginalPosition ?? new THREE.Vector3());
+            }
+            this.selectedObject = cmd.selectedObject;
+            this.grabbedObjectOriginalPosition = null;
+        });
         const laserGeometry = new THREE.BufferGeometry().setFromPoints([
             new THREE.Vector3(0, 0, 0),
             new THREE.Vector3(0, 0, -1)
         ]);
-        const laserMaterial = new THREE.LineBasicMaterial({ color: 0xffff00 }); // yellow line
+        const laserMaterial = new THREE.LineBasicMaterial({ color: this.config.rayColor });
         const laser = new THREE.Line(laserGeometry, laserMaterial);
         laser.scale.z = 5; // make it 5 units long
-        // this.controller.add(laser); // attach to controller so it moves with it
-        // this.renderer.setAnimationLoop(this.animate.bind(this));
+        this.controller.add(laser);
+        this.cameraRig.add(this.controller);
     }
     render() {
         // draw a single frame
@@ -33,15 +69,15 @@ class XRWorld extends World {
     }
     start() {
         this.renderer.setAnimationLoop(() => {
-            this.update(this.clock.getDelta());
-            // render a frame
+            this.updateMovement(this.clock.getDelta());
+            this.updateInteraction();
             this.renderer.render(this.scene, this.camera);
         });
     }
     stop() {
         this.renderer.setAnimationLoop(null);
     }
-    update(delta) {
+    updateMovement(delta) {
         // return;
         const session = this.renderer.xr.getSession();
         if (!session) {
@@ -49,7 +85,7 @@ class XRWorld extends World {
             return;
         }
         this.dummyCube.material.color.set('green');
-        const movementSpeed = 1 * this.speedMultiplier;
+        const movementSpeed = 1 * this.config.speedMultiplier;
         const rotationSpeed = 2;
         let moved = false;
         let inputDetected = false;
@@ -96,13 +132,13 @@ class XRWorld extends World {
                 }
                 // 🎯 Button-based speed control
                 if (gp.buttons[0]?.pressed) {
-                    this.speedMultiplier = 0.1;
+                    this.config.speedMultiplier = 0.1;
                 }
                 else if (gp.buttons[1]?.pressed) {
-                    this.speedMultiplier = 10;
+                    this.config.speedMultiplier = 10;
                 }
                 else {
-                    this.speedMultiplier = 1;
+                    this.config.speedMultiplier = 1;
                 }
             }
             // 🧾 Button inspection
@@ -139,43 +175,39 @@ class XRWorld extends World {
         }
         // this.showText(`${debugLeft}\n\n${debugRight}`);
     }
-    createTextSprite(text) {
-        const canvas = document.createElement('canvas');
-        canvas.width = 512;
-        canvas.height = 256;
-        const ctx = canvas.getContext('2d');
-        ctx.fillStyle = 'rgba(0,0,0,0.6)';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-        ctx.fillStyle = 'white';
-        ctx.font = '24px sans-serif';
-        ctx.fillText(text, 20, 50);
-        const texture = new THREE.CanvasTexture(canvas);
-        const material = new THREE.SpriteMaterial({ map: texture });
-        return new THREE.Sprite(material);
+    updateInteraction() {
+        this.highlight();
+        // ATTENTION: grabbing is disabled for now
+        /* if (!this.config.isGrabbable) {
+            return;
+        }
+
+        if (this.selectedObject) {
+            const pos = new THREE.Vector3();
+            this.controller.getWorldPosition(pos);
+            if (!this.grabbedObjectOriginalPosition) {
+                this.grabbedObjectOriginalPosition = this.selectedObject.position.clone();
+            }
+            this.selectedObject.position.copy(pos);
+        } */
     }
     showText(text) {
-        if (!this.textSprite) {
-            this.textSprite = this.createTextSprite(text);
-            this.textSprite.position.set(0, 0, -5);
-            this.camera.add(this.textSprite);
-            this.lastText = text;
+        // Remove old sprite
+        if (this.textSprite) {
+            this.controller.remove(this.textSprite);
+            this.textSprite.material.map?.dispose();
+            this.textSprite.material.dispose();
+            this.textSprite = null;
         }
+        // If no text or empty text, skip creating a new sprite
         if (!text || text.trim() === '') {
-            this.textSprite.visible = false;
-            this.lastText = '';
             return;
         }
-        // If text hasn't changed and sprite is already visible, skip redraw
-        if (this.textSprite.visible && text === this.lastText) {
-            return;
-        }
-        this.textSprite.visible = true;
-        this.lastText = text;
+        // Word-wrap the text into lines
         const fontSize = 24;
         const padding = 40;
         const lineHeight = 28;
         const maxWidth = 512 - padding;
-        // Word-wrap the text into lines
         const tempCanvas = document.createElement('canvas');
         const tempCtx = tempCanvas.getContext('2d');
         tempCtx.font = `${fontSize}px sans-serif`;
@@ -195,12 +227,11 @@ class XRWorld extends World {
         }
         if (line !== '')
             lines.push(line.trim());
-        // Resize and clear the canvas
-        const canvas = this.textSprite.material.map.image;
+        // Create canvas for final sprite
+        const canvas = document.createElement('canvas');
         canvas.width = 512;
         canvas.height = lines.length * lineHeight + 60;
         const ctx = canvas.getContext('2d');
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
         ctx.fillStyle = 'rgba(0,0,0,0.6)';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
         ctx.fillStyle = 'white';
@@ -209,50 +240,52 @@ class XRWorld extends World {
         lines.forEach((line, i) => {
             ctx.fillText(line, 20, 30 + i * lineHeight);
         });
-        this.textSprite.material.map.needsUpdate = true;
+        // Create new sprite
+        const texture = new THREE.CanvasTexture(canvas);
+        const material = new THREE.SpriteMaterial({ map: texture });
+        this.textSprite = new THREE.Sprite(material);
+        // Position and scale
         const aspect = canvas.width / canvas.height;
         this.textSprite.scale.set(1.5 * aspect, 1.5, 1);
-    }
-    onSelectStart() {
-        const intersected = this.raycastFromController();
-        if (intersected)
-            this.grabbedObject = intersected;
-    }
-    onSelectEnd() {
-        if (this.grabbedObject) {
-            this.grabbedObject.position.copy(this.grabbedObjectOriginalPosition || new THREE.Vector3());
-            this.grabbedObjectOriginalPosition = null;
-        }
-        this.grabbedObject = null;
-    }
-    animate() {
-        this.highlight();
-        if (this.grabbedObject) {
-            const pos = new THREE.Vector3();
-            this.controller.getWorldPosition(pos);
-            if (!this.grabbedObjectOriginalPosition) {
-                this.grabbedObjectOriginalPosition = this.grabbedObject.position.clone();
-            }
-            this.grabbedObject.position.copy(pos);
-        }
-        // this.renderer.render(this.scene, this.camera);
+        this.textSprite.position.set(0, 0, -5);
+        this.controller.add(this.textSprite);
     }
     highlight() {
         const intersected = this.raycastFromController();
-        this.scene.children.forEach(obj => {
-            if (obj.userData?.type === this.targetType && obj instanceof THREE.Mesh) {
+        this.intersected = intersected;
+        const targets = this.scene.children.filter(this.config.predicate);
+        targets.forEach(obj => {
+            if (obj instanceof THREE.Mesh) {
                 const mat = obj.material;
                 mat.emissive.set(intersected === obj ? 'yellow' : 'black');
             }
         });
     }
     raycastFromController() {
-        const tempMatrix = new THREE.Matrix4().identity().extractRotation(this.controller.matrixWorld);
         const raycaster = new THREE.Raycaster();
-        raycaster.ray.origin.setFromMatrixPosition(this.controller.matrixWorld);
-        raycaster.ray.direction.set(0, 0, -1).applyMatrix4(tempMatrix);
-        const targets = this.scene.children.filter(obj => obj.userData?.type === this.targetType);
-        const intersects = raycaster.intersectObjects(targets, false);
+        // Get world positions of laser start and end
+        const laserStart = new THREE.Vector3(0, 0, 0);
+        const laserEnd = new THREE.Vector3(0, 0, -1);
+        this.controller.localToWorld(laserStart);
+        this.controller.localToWorld(laserEnd);
+        const direction = new THREE.Vector3().subVectors(laserEnd, laserStart).normalize();
+        raycaster.ray.origin.copy(laserStart);
+        raycaster.ray.direction.copy(direction);
+        /*  // 🔴 DEBUG LINE
+         const debugLineMaterial = new THREE.LineBasicMaterial({ color: 'red' });
+         const debugLineGeometry = new THREE.BufferGeometry().setFromPoints([
+             laserStart.clone(),
+             laserStart.clone().add(direction.clone().multiplyScalar(5)) // extend line 5 units
+         ]);
+         const debugLine = new THREE.Line(debugLineGeometry, debugLineMaterial);
+         this.scene.add(debugLine);
+ 
+         // Optionally remove old debug lines to prevent buildup
+         setTimeout(() => this.scene.remove(debugLine), 100); */
+        // Perform raycast
+        const targets = this.scene.children.filter(this.config.predicate);
+        const recursive = this.config.recursiveRaycast ?? false; // Default to false for backward compatibility
+        const intersects = raycaster.intersectObjects(targets, recursive);
         return intersects.length > 0 ? intersects[0].object : null;
     }
 }
