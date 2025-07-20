@@ -16,8 +16,8 @@ abstract class World {
     protected container;
     protected dummyCube: THREE.Mesh;
 
-    constructor(container: HTMLDivElement) {
-        this.scene = createScene('skyblue');
+    constructor(container: HTMLDivElement, color: string = 'skyblue') {
+        this.scene = createScene(color);
         this.renderer = createRenderer();
         this.camera = createCamera(30);
         this.cameraRig.add(this.camera);

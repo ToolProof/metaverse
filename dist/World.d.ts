@@ -7,7 +7,7 @@ declare abstract class World {
     protected clock: THREE.Clock;
     protected container: HTMLDivElement;
     protected dummyCube: THREE.Mesh;
-    constructor(container: HTMLDivElement);
+    constructor(container: HTMLDivElement, color?: string);
     abstract init(): Promise<void>;
     abstract render(): void;
     abstract start(): void;

@@ -6,10 +6,10 @@ import { createControls } from './controls.js';
 import { Resizer } from './Resizer.js';
 import * as THREE from 'three';
 class World {
-    constructor(container) {
+    constructor(container, color = 'skyblue') {
         this.cameraRig = new THREE.Group();
         this.clock = new THREE.Clock();
-        this.scene = createScene('skyblue');
+        this.scene = createScene(color);
         this.renderer = createRenderer();
         this.camera = createCamera(30);
         this.cameraRig.add(this.camera);
