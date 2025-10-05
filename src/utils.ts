@@ -3,7 +3,7 @@ import * as THREE from 'three';
 export function placeXZRing(
     yOffset: number,
     ySpacing: number,
-    boxWidth = 0.05, // ATTENTION: tight coupling
+    boxWidth = 0.05, // ATTENTION: tight coupling, it doesn't need to be boxes
     gap = 0.5,
     objects: { title: string; content: string }[], // ATTENTION: tight coupling
 ): ({ title: string; content: string; position: THREE.Vector3 })[] {

@@ -8,28 +8,27 @@ import * as THREE from 'three';
 
 
 abstract class World {
-    protected scene;
+    protected container;
     protected renderer;
+    protected scene;
     protected camera;
     protected cameraRig = new THREE.Group();
     protected clock = new THREE.Clock();
-    protected container;
     protected dummyCube: THREE.Mesh;
 
     constructor(container: HTMLDivElement, color: string = 'skyblue') {
-        this.scene = createScene(color);
+        this.container = container;
         this.renderer = createRenderer();
+        this.scene = createScene(color);
         this.camera = createCamera(30);
         this.cameraRig.add(this.camera);
 
         this.dummyCube = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial({ color: 0x00ff00 }));
         this.dummyCube.position.set(0, 1, -2); // Position it in front of the camera
 
-        this.container = container;
-
         const { ambientLight, mainLight } = createLights();
 
-        this.scene.add(ambientLight, mainLight, this.cameraRig);
+        this.scene.add(this.dummyCube, ambientLight, mainLight, this.cameraRig);
 
         container.append(this.renderer.domElement);
 
