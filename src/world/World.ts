@@ -1,9 +1,9 @@
-import { createCamera } from './camera.js';
-import { createLights } from './lights.js';
-import { createScene } from './scene.js';
-import { createRenderer } from './renderer.js';
-import { createControls } from './controls.js';
-import { Resizer } from './Resizer.js';
+import { createCamera } from './components/camera.js';
+import { createLights } from './components/lights.js';
+import { createScene } from './components/scene.js';
+import { createRenderer } from './systems/renderer.js';
+import { createControls } from './systems/controls.js';
+import { Resizer } from './systems/Resizer.js';
 import * as THREE from 'three';
 
 
@@ -23,8 +23,8 @@ abstract class World {
         this.camera = createCamera(30);
         this.cameraRig.add(this.camera);
 
-        this.dummyCube = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial({ color: 0x00ff00 }));
-        this.dummyCube.position.set(0, 1, -2); // Position it in front of the camera
+        this.dummyCube = new THREE.Mesh(new THREE.BoxGeometry(1, 3, 3), new THREE.MeshBasicMaterial({ color: 0xffff00 }));
+        this.dummyCube.position.set(10, -5, 5); // Position it in front of the camera
 
         const { ambientLight, mainLight } = createLights();
 
@@ -50,3 +50,28 @@ abstract class World {
 }
 
 export { World };
+
+
+class World2 extends World {
+    constructor(container: HTMLDivElement, color: string = 'skyblue') {
+        super(container, color);
+    }
+
+    init(): Promise<void> {
+        return Promise.resolve();
+    }
+
+    render(): void {
+        this.renderer.render(this.scene, this.camera);
+    }
+
+    start(): void {
+        // no-op for now
+    }
+
+    stop(): void {
+        // no-op for now
+    }
+}
+
+export { World2 };

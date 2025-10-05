@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-export function placeXZRing(yOffset, ySpacing, boxWidth = 0.05, // ATTENTION: tight coupling
+export function placeXZRing(yOffset, ySpacing, boxWidth = 0.05, // ATTENTION: tight coupling, it doesn't need to be boxes
 gap = 0.5, objects) {
     const angleStep = (2 * Math.PI) / objects.length;
     const radius = (boxWidth + gap) / angleStep;
