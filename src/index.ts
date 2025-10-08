@@ -1,13 +1,13 @@
-import { World2 } from './world/World.js';
+import { Runtime2 } from './runtime/Runtime.js';
 
 console.log('Hello, Metaverse!');
 
 const container = document.querySelector('#scene-container');
 
-const world2 = new World2(container as HTMLDivElement);
+const runtime2 = new Runtime2(container as HTMLDivElement);
 
-await world2.init();
+await runtime2.init();
 
-world2.render();
+runtime2.render();
 
 

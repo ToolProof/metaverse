@@ -1,4 +1,4 @@
-import { World } from './World.js';
+import { Runtime } from './Runtime.js';
 import { VRButton } from 'three/examples/jsm/webxr/VRButton.js';
 import * as THREE from 'three';
 import type { Updatable } from './systems/loop/types.js';
@@ -52,7 +52,7 @@ export class PersistentSelection implements SelectionBehavior {
 }
 
 
-abstract class XRWorld extends World {
+abstract class XRRuntime extends Runtime {
     private config: Config;
     private controller: THREE.Group;
     protected intersected: THREE.Object3D | null = null;
@@ -246,7 +246,7 @@ abstract class XRWorld extends World {
 
         if (this.selectedObject) {
             const pos = new THREE.Vector3();
-            this.controller.getWorldPosition(pos);
+            this.controller.getRuntimePosition(pos);
             if (!this.grabbedObjectOriginalPosition) {
                 this.grabbedObjectOriginalPosition = this.selectedObject.position.clone();
             }
@@ -342,12 +342,12 @@ abstract class XRWorld extends World {
     private raycastFromController(): THREE.Object3D | null {
         const raycaster = new THREE.Raycaster();
 
-        // Get world positions of laser start and end
+        // Get runtime positions of laser start and end
         const laserStart = new THREE.Vector3(0, 0, 0);
         const laserEnd = new THREE.Vector3(0, 0, -1);
 
-        this.controller.localToWorld(laserStart);
-        this.controller.localToWorld(laserEnd);
+        this.controller.localToRuntime(laserStart);
+        this.controller.localToRuntime(laserEnd);
 
         const direction = new THREE.Vector3().subVectors(laserEnd, laserStart).normalize();
 
@@ -389,4 +389,4 @@ abstract class XRWorld extends World {
 }
 
 
-export { XRWorld };
+export { XRRuntime };
