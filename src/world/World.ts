@@ -1,17 +1,19 @@
+import * as THREE from 'three';
+import { createScene } from './components/scene.js';
 import { createCamera } from './components/camera.js';
 import { createLights } from './components/lights.js';
-import { createScene } from './components/scene.js';
+import { loadBirds } from './components/birds/birds.js';
 import { createRenderer } from './systems/renderer.js';
 import { createControls } from './systems/controls.js';
 import { Resizer } from './systems/Resizer.js';
-import * as THREE from 'three';
 
 
 abstract class World {
     protected container;
-    protected renderer;
     protected scene;
     protected camera;
+    protected renderer;
+    protected controls;
     protected cameraRig = new THREE.Group();
     protected clock = new THREE.Clock();
     protected dummyCube: THREE.Mesh;
@@ -21,6 +23,7 @@ abstract class World {
         this.renderer = createRenderer();
         this.scene = createScene(color);
         this.camera = createCamera(30);
+        this.controls = createControls(this.camera, this.renderer.domElement);
         this.cameraRig.add(this.camera);
 
         this.dummyCube = new THREE.Mesh(new THREE.BoxGeometry(1, 3, 3), new THREE.MeshBasicMaterial({ color: 0xffff00 }));
@@ -57,8 +60,12 @@ class World2 extends World {
         super(container, color);
     }
 
-    init(): Promise<void> {
-        return Promise.resolve();
+    async init(): Promise<void> {
+        const { parrot, flamingo, stork } = await loadBirds();
+        this.controls.target.copy(parrot.position);
+
+        // loop.updatables.push(parrot, flamingo, stork);
+        this.scene.add(parrot, flamingo, stork);
     }
 
     render(): void {
