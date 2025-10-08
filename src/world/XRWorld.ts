@@ -1,6 +1,7 @@
 import { World } from './World.js';
 import { VRButton } from 'three/examples/jsm/webxr/VRButton.js';
 import * as THREE from 'three';
+import type { Updatable } from './systems/loop/types.js';
 
 interface Config {
     speedMultiplier: number;
@@ -73,7 +74,7 @@ abstract class XRWorld extends World {
 
         this.controller = this.renderer.xr.getController(1);
 
-        this.controller.addEventListener('selectstart', () => {
+        (this.controller as any).addEventListener('selectstart', () => {
             const intersected = this.raycastFromController();
             const cmd = this.config.selectionBehavior.onSelectStart(intersected);
             this.selectedObject = cmd.selectedObject;
@@ -82,7 +83,7 @@ abstract class XRWorld extends World {
             }
         });
 
-        this.controller.addEventListener('selectend', () => {
+        (this.controller as any).addEventListener('selectend', () => {
             const cmd = this.config.selectionBehavior.onSelectEnd(this.selectedObject);
             if (cmd.restoreOriginalPosition && this.selectedObject) {
                 this.selectedObject.position.copy(this.grabbedObjectOriginalPosition ?? new THREE.Vector3());
@@ -113,27 +114,21 @@ abstract class XRWorld extends World {
     }
 
     start() {
-        this.renderer.setAnimationLoop(() => {
-            this.updateMovement(this.clock.getDelta());
-            this.updateInteraction();
-
-            this.renderer.render(this.scene, this.camera);
-        });
-    }
-
-    stop() {
-        this.renderer.setAnimationLoop(null);
+        const movementSystem: Updatable = { tick: (delta) => this.updateMovement(delta) };
+        const interactionSystem: Updatable = { tick: () => this.updateInteraction() };
+        this.loop.add(movementSystem, interactionSystem);
+        super.start();
     }
 
     protected updateMovement(delta: number) {
         // return;
         const session = this.renderer.xr.getSession();
         if (!session) {
-            this.dummyCube.material.color.set('red');
+            this.setDummyColor('red');
             return;
         }
 
-        this.dummyCube.material.color.set('green');
+        this.setDummyColor('green');
 
         const movementSpeed = 1 * this.config.speedMultiplier;
         const rotationSpeed = 2;
@@ -233,9 +228,9 @@ abstract class XRWorld extends World {
         }
 
         if (!inputDetected) {
-            this.dummyCube.material.color.set('orange');
+            this.setDummyColor('orange');
         } else if (!moved) {
-            this.dummyCube.material.color.set('yellow');
+            this.setDummyColor('yellow');
         }
 
         // this.showText(`${debugLeft}\n\n${debugRight}`);
@@ -377,6 +372,15 @@ abstract class XRWorld extends World {
         const intersects = raycaster.intersectObjects(targets, recursive);
 
         return intersects.length > 0 ? intersects[0].object : null;
+    }
+
+    private setDummyColor(color: string) {
+        const mat = this.dummyCube.material as any;
+        if (Array.isArray(mat)) {
+            mat.forEach((m: any) => m?.color?.set?.(color));
+        } else {
+            mat?.color?.set?.(color);
+        }
     }
 
 

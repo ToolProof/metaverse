@@ -5,6 +5,10 @@ import { createLights } from './components/lights.js';
 import { loadBirds } from './components/birds/birds.js';
 import { createRenderer } from './systems/renderer.js';
 import { createControls } from './systems/controls.js';
+import Loop from './systems/Loop.js';
+import { FrameLoop } from './systems/loop/FrameLoop.js';
+import { RAFScheduler } from './systems/loop/schedulers.js';
+import type { Updatable } from './systems/loop/types.js';
 import { Resizer } from './systems/Resizer.js';
 
 
@@ -14,6 +18,7 @@ abstract class World {
     protected camera;
     protected renderer;
     protected controls;
+    protected loop: FrameLoop;
     protected cameraRig = new THREE.Group();
     protected clock = new THREE.Clock();
     protected dummyCube: THREE.Mesh;
@@ -24,6 +29,8 @@ abstract class World {
         this.scene = createScene(color);
         this.camera = createCamera(30);
         this.controls = createControls(this.camera, this.renderer.domElement);
+        // New frame loop: RAF by default, systems can add more updatables
+        this.loop = new FrameLoop(new RAFScheduler());
         this.cameraRig.add(this.camera);
 
         this.dummyCube = new THREE.Mesh(new THREE.BoxGeometry(1, 3, 3), new THREE.MeshBasicMaterial({ color: 0xffff00 }));
@@ -35,10 +42,15 @@ abstract class World {
 
         container.append(this.renderer.domElement);
 
-        createControls(this.camera, this.renderer.domElement);
-
         new Resizer(container, this.camera, this.renderer);
 
+        // Always render each frame via a tiny system
+        const renderSystem: Updatable = {
+            tick: () => this.renderer.render(this.scene, this.camera)
+        };
+        this.loop.add(renderSystem);
+
+        // Preserve previous behavior: start loop automatically
         this.start();
     }
 
@@ -46,9 +58,13 @@ abstract class World {
 
     abstract render(): void;
 
-    abstract start(): void;
+    start(): void {
+        this.loop.start();
+    }
 
-    abstract stop(): void;
+    stop(): void {
+        this.loop.stop();
+    }
 
 }
 
