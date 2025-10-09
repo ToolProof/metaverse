@@ -13,7 +13,7 @@ interface Config {
 }
 
 interface SelectionCommand {
-    selectedObject: THREE.Object3D | null;
+    selected: THREE.Object3D | null;
     restoreOriginalPosition?: boolean;
 }
 
@@ -24,11 +24,11 @@ interface SelectionBehavior {
 
 export class TransientSelection implements SelectionBehavior {
     onSelectStart(intersected: THREE.Object3D | null): SelectionCommand {
-        return { selectedObject: intersected, restoreOriginalPosition: true };
+        return { selected: intersected, restoreOriginalPosition: true };
     }
 
     onSelectEnd(current: THREE.Object3D | null): SelectionCommand {
-        return { selectedObject: null };
+        return { selected: null };
     }
 }
 
@@ -39,15 +39,15 @@ export class PersistentSelection implements SelectionBehavior {
         // Deselect if we click on the same object again or nothing
         if (!intersected || intersected === this.lastSelected) {
             this.lastSelected = null;
-            return { selectedObject: null };
+            return { selected: null };
         }
 
         this.lastSelected = intersected;
-        return { selectedObject: intersected };
+        return { selected: intersected };
     }
 
     onSelectEnd(current: THREE.Object3D | null): SelectionCommand {
-        return { selectedObject: current }; // no change
+        return { selected: current }; // no change
     }
 }
 
@@ -56,14 +56,13 @@ abstract class XRRuntime extends Runtime {
     private config: Config;
     private controller: THREE.Group;
     protected intersected: THREE.Object3D | null = null;
-    protected selectedObject: THREE.Object3D | null = null;
-    private grabbedObjectOriginalPosition: THREE.Vector3 | null = null;
+    protected selected: THREE.Object3D | null = null;
+    private grabbedOriginalPosition: THREE.Vector3 | null = null;
     private textSprite: THREE.Sprite | null = null;
 
     constructor(
         container: HTMLDivElement,
         config: Config
-
     ) {
         super(container);
 
@@ -77,19 +76,19 @@ abstract class XRRuntime extends Runtime {
         (this.controller as any).addEventListener('selectstart', () => {
             const intersected = this.raycastFromController();
             const cmd = this.config.selectionBehavior.onSelectStart(intersected);
-            this.selectedObject = cmd.selectedObject;
+            this.selected = cmd.selected;
             if (cmd.restoreOriginalPosition) {
-                this.grabbedObjectOriginalPosition = this.selectedObject?.position.clone() ?? null;
+                this.grabbedOriginalPosition = this.selected?.position.clone() ?? null;
             }
         });
 
         (this.controller as any).addEventListener('selectend', () => {
-            const cmd = this.config.selectionBehavior.onSelectEnd(this.selectedObject);
-            if (cmd.restoreOriginalPosition && this.selectedObject) {
-                this.selectedObject.position.copy(this.grabbedObjectOriginalPosition ?? new THREE.Vector3());
+            const cmd = this.config.selectionBehavior.onSelectEnd(this.selected);
+            if (cmd.restoreOriginalPosition && this.selected) {
+                this.selected.position.copy(this.grabbedOriginalPosition ?? new THREE.Vector3());
             }
-            this.selectedObject = cmd.selectedObject;
-            this.grabbedObjectOriginalPosition = null;
+            this.selected = cmd.selected;
+            this.grabbedOriginalPosition = null;
         });
 
 
@@ -244,13 +243,13 @@ abstract class XRRuntime extends Runtime {
             return;
         }
 
-        if (this.selectedObject) {
+        if (this.selected) {
             const pos = new THREE.Vector3();
             this.controller.getRuntimePosition(pos);
             if (!this.grabbedObjectOriginalPosition) {
-                this.grabbedObjectOriginalPosition = this.selectedObject.position.clone();
+                this.grabbedObjectOriginalPosition = this.selected.position.clone();
             }
-            this.selectedObject.position.copy(pos);
+            this.selected.position.copy(pos);
         } */
 
     }
