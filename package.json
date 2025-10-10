@@ -14,12 +14,6 @@
     "preview": "vite preview",
     "build:site": "vite build"
   },
-  "exports": {
-    ".": {
-      "types": "./dist/runtime/XRRuntime.d.ts",
-      "default": "./dist/runtime/XRRuntime.js"
-    }
-  },
   "peerDependencies": {
     "three": "^0.177.0"
   },
