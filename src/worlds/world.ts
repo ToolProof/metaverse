@@ -36,7 +36,7 @@ abstract class World {
 
         new Resizer(container, this.camera, this.renderer);
 
-        this.start();
+        // this.start();
     }
 
     abstract init(): Promise<void>;

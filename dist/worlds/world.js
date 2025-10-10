@@ -21,7 +21,7 @@ class World {
         container.append(this.renderer.domElement);
         createControls(this.camera, this.renderer.domElement);
         new Resizer(container, this.camera, this.renderer);
-        this.start();
+        // this.start();
     }
 }
 export { World };
